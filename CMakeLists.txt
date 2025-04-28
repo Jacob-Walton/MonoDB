@@ -24,6 +24,7 @@ endif()
 
 # Source files for the library
 set(MONODB_SOURCES
+    src/core/storage/wal.c
     src/main.c
 )
 
