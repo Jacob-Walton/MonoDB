@@ -51,15 +51,25 @@ if(BUILD_TESTS)
     add_subdirectory(tests)
 endif()
 
+# Get current configuration for multi-config generators
+if(CMAKE_CONFIGURATION_TYPES)
+    # For multi-configuration builds (VS, Xcode)
+    set(CMAKE_CTEST_ARGUMENTS --build-config $<CONFIG>)
+else()
+    # For single-configuration builds (Unix Makefiles, Ninja)
+    set(CMAKE_CTEST_ARGUMENTS "")
+endif()
+
 # Standard test target
-if(TARGET test_runner OR TARGET test_lexer OR TARGET test_parser OR TARGET test_serializer)
+if(TARGET test_runner OR TARGET test_lexer OR TARGET test_parser OR TARGET test_serializer OR TARGET test_wal)
     add_custom_target(check
-        COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
+        COMMAND ${CMAKE_CTEST_COMMAND} ${CMAKE_CTEST_ARGUMENTS} --output-on-failure
         DEPENDS
             $<$<TARGET_EXISTS:test_runner>:test_runner>
             $<$<TARGET_EXISTS:test_lexer>:test_lexer>
             $<$<TARGET_EXISTS:test_parser>:test_parser>
             $<$<TARGET_EXISTS:test_serializer>:test_serializer>
+            $<$<TARGET_EXISTS:test_wal>:test_wal>
         COMMENT "Running all tests"
     )
 endif()
