@@ -9,12 +9,12 @@ project(MonoDB
 # Set C standard globally
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_C_EXTENSIONS OFF)
+set(CMAKE_C_EXTENSIONS ON)
 
 # Set C++ standard globally
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_EXTENSIONS ON)
 
 # Set build type to Release by default if not specified
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -22,52 +22,38 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     message(STATUS "Setting build type to Release as none was specified")
 endif()
 
-# Define path to NSQL
-set(NSQL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/..)
-
-# Check if NSQL is already built
-if(EXISTS ${NSQL_DIR}/build/libnsql.a OR 
-   EXISTS ${NSQL_DIR}/build/Debug/nsql.lib OR 
-   EXISTS ${NSQL_DIR}/build/Release/nsql.lib)
-    message(STATUS "Using pre-built NSQL library")
-    
-    # Create imported library target
-    add_library(nsql STATIC IMPORTED)
-    
-    # Set platform-specific library paths
-    if(WIN32)
-        if(EXISTS ${NSQL_DIR}/build/Debug/nsql.lib)
-            set_target_properties(nsql PROPERTIES 
-                IMPORTED_LOCATION ${NSQL_DIR}/build/Debug/nsql.lib)
-        else()
-            set_target_properties(nsql PROPERTIES 
-                IMPORTED_LOCATION ${NSQL_DIR}/build/Release/nsql.lib)
-        endif()
-    else()
-        set_target_properties(nsql PROPERTIES 
-            IMPORTED_LOCATION ${NSQL_DIR}/build/libnsql.a)
-    endif()
-else()
-    message(FATAL_ERROR "NSQL library not found. Please build NSQL first in the parent directory.")
-endif()
-
 # Source files for MonoDB
 set(MONODB_SOURCES
     src/core/storage/wal.c
+    src/core/query/processor.c
     src/main.c
 )
 
 # Build MonoDB
 add_executable(monodb ${MONODB_SOURCES})
 
+add_subdirectory(NSQL)
+add_subdirectory(repl)
+
 # Include directories for the library
 target_include_directories(monodb PUBLIC 
     ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${NSQL_DIR}/include  # NSQL headers
+    ${CMAKE_CURRENT_SOURCE_DIR}/nsql/include
 )
 
-# Link against NSQL
+# Update includes and link libraries
+target_include_directories(monodb PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${NSQL_DIR}/include
+    ${SAFECLIB_INCLUDE_DIR}
+)
+
 target_link_libraries(monodb PRIVATE nsql)
+
+# Link socket library on Windows
+if(WIN32)
+    target_link_libraries(monodb PRIVATE ws2_32)
+endif()
 
 # Compiler flags
 if(MSVC)
