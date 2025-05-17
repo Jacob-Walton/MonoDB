@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.15)
+
 add_executable(nsql_repl src/main.cpp)
 target_link_libraries(nsql_repl PRIVATE nsql)
 target_include_directories(nsql_repl PRIVATE ${CMAKE_SOURCE_DIR}/include)

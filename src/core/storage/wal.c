@@ -134,16 +134,8 @@ static wal_segment_t* create_new_segment(wal_context_t* ctx) {
         return NULL;
     }
 
-#ifdef __linux__
-    /* On Linux, use fallocate for preallocation */
-    if (fallocate(segment->fd, 0, 0, ctx->segment_size) != 0) {
-        /* Fall back to manual allocation */
-        ftruncate_compat(segment->fd, ctx->segment_size);
-    }
-#else
-    /* Use ftruncate */
+    /* Preallocate data */
     ftruncate_compat(segment->fd, ctx->segment_size);
-#endif
 
     segment->state = WAL_SEGMENT_ACTIVE;
     return segment;
@@ -297,9 +289,7 @@ wal_context_t* wal_init(const char* wal_dir, uint32_t segment_size) {
         return NULL;
 
     memset(ctx, 0, sizeof(wal_context_t));
-    /* copy directory path safely */
-    // strcpy(ctx->wal_dir, wal_dir);                    // old (unsafe)
-    strcpy_s(ctx->wal_dir, sizeof(ctx->wal_dir), wal_dir); 
+    strcpy(ctx->wal_dir, wal_dir);
 
     ctx->segment_size      = segment_size > 0 ? segment_size : 16 * 1024 * 1024; /* Default: 16MB */
     ctx->next_segment_num  = 1; /* Start with segment number 1 */

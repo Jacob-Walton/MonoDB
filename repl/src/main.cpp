@@ -21,6 +21,9 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h> // For close()
+#include <cstring>
+#include <cerrno>
+#include <netinet/tcp.h> // For TCP_NODELAY
 #define SOCKET int
 #define INVALID_SOCKET -1
 #define SOCKET_ERROR -1
@@ -65,9 +68,11 @@ SOCKET connect_to_server() {
 
     SOCKET connectSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (connectSocket == INVALID_SOCKET) {
-        std::cerr << "Error creating socket: " << WSAGetLastError() << std::endl;
 #ifdef _WIN32
+        std::cerr << "Error creating socket: " << WSAGetLastError() << std::endl;
         WSACleanup();
+#else
+        std::cerr << "Error creating socket: " << strerror(errno) << std::endl;
 #endif
         return INVALID_SOCKET;
     }
@@ -88,10 +93,13 @@ SOCKET connect_to_server() {
 
     // Connect to server.
     if (connect(connectSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
+#ifdef _WIN32
         std::cerr << "Unable to connect to server: " << WSAGetLastError() << std::endl;
         closesocket(connectSocket);
-#ifdef _WIN32
         WSACleanup();
+#else
+        std::cerr << "Unable to connect to server: " << strerror(errno) << std::endl;
+        closesocket(connectSocket);
 #endif
         return INVALID_SOCKET;
     }
@@ -441,7 +449,11 @@ int main() {
                 int sendResult = send(serverSocket, query_to_send.c_str() + offset, chunk_size, 0);
                 
                 if (sendResult == SOCKET_ERROR) {
+#ifdef _WIN32
                     std::cerr << "Send failed: " << WSAGetLastError() << std::endl;
+#else
+                    std::cerr << "Send failed: " << strerror(errno) << std::endl;
+#endif
                     break;
                 }
                 
